@@ -13,7 +13,6 @@ def table_name(excel):
     title = faculty.replace('-', '_').replace(' ', '_')
     title_v2 = title.replace('(', '_').replace(')', '_')
     en_title = translit(title_v2, language_code='ru', reversed=True).replace("'", '')
-    # print(en_title)
     return en_title
 
 
@@ -37,7 +36,6 @@ def group_name(excel):
     sheet = wb.active
     main_cell_value = sheet[1][0].value
     group = main_cell_value.split('группы ')[1].split('факультета')[0].replace('\n', '')
-    # print(group)
     return group
 
 
