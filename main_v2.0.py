@@ -4,10 +4,7 @@ import texts
 import keyboards
 from config import token
 from vkbottle.bot import Bot, Message
-import os.path
 import sqlite3
-
-REAL_PATH = os.path.relpath(__file__)[:os.path.relpath(__file__).rfind("/") + 1]
 
 bot = Bot(token)
 ctx = CtxStorage()
@@ -15,12 +12,16 @@ ctx = CtxStorage()
 conn = sqlite3.connect('list_of_students.db')
 cur = conn.cursor()
 
+# В общем и целом здесь ничего в комментировании особо не нуждается. Конструкции однотипны,
+# меняется, в основном, только текст ответа. SQL запросы - отдельная тема, кому надо - тот поймет.
+
 
 @bot.on.private_message(text='Начать')
 async def hello(message: Message):
     await message.answer("МИИГАиК - лучший ВУЗ?", keyboard=keyboards.hello)
 
 
+# Обработка следующих 4-х строк заканчивается одинаково: текст + меню
 @bot.on.private_message(text='Да!')
 @bot.on.private_message(text='Определенно да')
 @bot.on.private_message(text='Вне всяких сомнений')
@@ -31,6 +32,8 @@ async def menu(message: Message):
                          keyboard=keyboards.main_menu)
 
 
+# Тут у нас машина состояний. Определяет "лесенку" диалога - что за чем следует.
+# Подробнее - в документации.
 class WhoForStates(vkbottle.BaseStateGroup):
     who_for_faculty = 0
     who_for_year = 1
@@ -92,6 +95,9 @@ async def who_for_confirmation(message: Message):
                          keyboard=keyboards.confirmation)
 
 
+# Масштабный обработчик ответов пользователя. В зависимости от поступивших исходных
+# определяется со списком студентов и высылает его пользователю. В случае ошибки предлагает
+# заполнить все заново.
 @bot.on.private_message(state=WhoForStates.confirmation_who_for)
 async def result(message: Message):
     ctx.set('who_for_confirmation', message.text)
@@ -106,7 +112,7 @@ async def result(message: Message):
             elif ctx.get('who_for_faculty') == 'ФОП':
                 faculty = 'fakultet_Opticheskogo_priborostroenija'
             elif ctx.get('who_for_faculty') == 'АРХ':
-                faculty = 'fakultet_Arhitektury_i_gradostroitelstva'
+                faculty = 'fakultet_Arhitektury_i_gastrointestinal'
             elif ctx.get('who_for_faculty') == 'ФУТ':
                 faculty = 'fakultet_Upravlenija_territorijami'
 
@@ -123,6 +129,8 @@ async def result(message: Message):
 
             var = ctx.get('your_var')
 
+            # По не очень мне понятным причинам IDE ругается, что faculty и sem - вне зоны доступа.
+            # Впрочем, на работоспособность это не влияет.
             query_text = f"""SELECT group_name, first_name, last_name FROM {faculty} WHERE sem='{sem}' AND person_number='{var}' ORDER BY group_name"""
             answer = cur.execute(query_text).fetchall()
             final_answer = 'Студенты, подходящие под твой запрос:\n'
@@ -624,6 +632,7 @@ class DoNotAnswer(vkbottle.BaseStateGroup):
     stop = 0
 
 
+# Функция игнора для общения с администрацией. Временно парализует бота
 @bot.on.private_message(text='!игнор')
 async def do_not_answer(message: Message):
     await bot.state_dispenser.set(message.peer_id, DoNotAnswer.stop)
@@ -641,6 +650,7 @@ async def do_not_answer(message: Message):
         await bot.state_dispenser.get(DoNotAnswer.stop)
 
 
+# Обработчик неизвестных сообщений. Всегда должен быть в конце
 @bot.on.private_message()
 async def unknown_command(message: Message):
     await message.answer("Я вас не понимаю. Воспользуйтесь меню.",
