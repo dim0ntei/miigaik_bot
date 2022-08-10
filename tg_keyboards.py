@@ -35,7 +35,7 @@ hello = ReplyKeyboardMarkup(resize_keyboard=True,
                             row_width=2).add(YES, actually).row(no_doubt)
 main_menu = ReplyKeyboardMarkup(resize_keyboard=True,
                                 one_time_keyboard=True,
-                                row_width=2).add(search_by_option).row(custom_works).row(extra)
+                                row_width=2).add(search_by_option).row(custom_works, extra)
 
 # Инлайн клавиатуры
 confirmation = InlineKeyboardMarkup().row(yes, no)
