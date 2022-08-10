@@ -183,6 +183,9 @@ async def exit_or_no(call: types.CallbackQuery, state: FSMContext):
         await call.answer()
 
 
+@dp.message_handler(Text(equals='', ignore_case=True))
+
+
 @dp.message_handler()
 async def unknown(message: types.Message):
     await message.answer('Я тебя не понимаю. Воспользуйся кнопками.',
