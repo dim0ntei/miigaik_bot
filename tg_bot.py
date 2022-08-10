@@ -61,8 +61,8 @@ async def search_faculty(message: types.Message):
 async def search_year(call: types.CallbackQuery, state: FSMContext):
     await SearchByOption.next()
     if call.data == 'back':
-        await call.message.answer('Жмякни сюда\n\n'
-                                  '/exit')
+        await call.message.answer('Возвращаемся',
+                                  reply_markup=tg_keyboards.main_menu)
         await state.finish()
         await call.answer()
     else:
@@ -177,8 +177,8 @@ async def exit_or_no(call: types.CallbackQuery, state: FSMContext):
         await SearchByOption.faculty.set()
         await call.answer()
     elif call.data == 'back':
-        await call.message.answer('Жмякни сюда:\n\n'
-                                  '/exit')
+        await call.message.answer('Возвращаемся',
+                                  reply_markup=tg_keyboards.main_menu)
         await state.finish()
         await call.answer()
 
