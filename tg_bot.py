@@ -50,10 +50,10 @@ class SearchByOption(StatesGroup):
 @dp.message_handler(Text(equals='Поиск по варианту', ignore_case=True))
 async def search_faculty(message: types.Message):
     await SearchByOption.faculty.set()
-    await message.answer('[Об этой функции](https://telegra.ph/Funkciya-poisk-po-variantu-08-09)',
+    await message.answer('[Об этой функции](https://telegra.ph/Funkciya-poisk-po-variantu-08-09)\n\n'
+                         'Выбери факультет: ',
                          parse_mode="Markdown",
-                         reply_markup=types.ReplyKeyboardRemove())
-    await message.answer('Выбери свой факультет',
+                         disable_web_page_preview=True,
                          reply_markup=tg_keyboards.faculty)
 
 
@@ -61,6 +61,7 @@ async def search_faculty(message: types.Message):
 async def search_year(call: types.CallbackQuery, state: FSMContext):
     await SearchByOption.next()
     if call.data == 'back':
+        await call.message.delete()
         await call.message.answer('Возвращаемся',
                                   reply_markup=tg_keyboards.main_menu)
         await state.finish()
@@ -101,9 +102,9 @@ async def search_confirm(message: types.Message, state: FSMContext):
     message_text = message.text
     async with state.proxy() as data:
         data['var'] = message_text
-        await message.answer(f"Ты выбрал факультет {data.get('faculty')} в {data.get('year')}, "
-                             f"{data.get('sem')}\n\nВсе правильно?",
-                             reply_markup=tg_keyboards.confirmation)
+    await message.answer(f"Ты выбрал факультет {data.get('faculty')} в {data.get('year')}, "
+                         f"{data.get('sem')}\n\nВсе правильно?",
+                         reply_markup=tg_keyboards.confirmation)
 
 
 @dp.callback_query_handler(state=SearchByOption.confirmation)
@@ -158,7 +159,6 @@ async def result(call: types.CallbackQuery, state: FSMContext):
         except UnboundLocalError:
             await call.message.edit_text('Ошибка. Возможно, вы задали некорректные условия поиска. '
                                          'Попробуйте еще раз', reply_markup=tg_keyboards.one_more)
-            await exit_or_no
             await call.answer()
 
     if call.data == 'no':
@@ -177,13 +177,126 @@ async def exit_or_no(call: types.CallbackQuery, state: FSMContext):
         await SearchByOption.faculty.set()
         await call.answer()
     elif call.data == 'back':
+        await call.message.delete()
         await call.message.answer('Возвращаемся',
                                   reply_markup=tg_keyboards.main_menu)
         await state.finish()
         await call.answer()
 
 
-@dp.message_handler(Text(equals='', ignore_case=True))
+class ExecutorsMenu(StatesGroup):
+    main = State()
+    buy_ready = State()
+    executors = State()
+
+
+@dp.message_handler(Text(equals='Работы на заказ', ignore_case=True))
+async def executors_menu(message: types.Message):
+    await message.answer('[Почитать про работы на заказ можно здесь](https://telegra.ph/Razdel-raboty-na-zakaz-08-10)',
+                         parse_mode="Markdown",
+                         reply_markup=tg_keyboards.executors_menu)
+    await ExecutorsMenu.main.set()
+
+
+@dp.callback_query_handler(state=ExecutorsMenu.main)
+async def executors_menu_2(call: types.CallbackQuery, state: FSMContext):
+    if call.data == 'executors':
+        query_text = f"""SELECT name, faculty, about, link FROM executors"""
+        exec_list = cur.execute(query_text).fetchall()
+        final_exec_list = 'В связи с тем, что исполнителей пока что мало, они выводятся одним списком. В будущем будет ' \
+                          'фильтрация по факультету.\n\nНа данный момент зарегистрированы:\n\n'
+        for executor in exec_list:
+            element = f"Имя: {executor[0]}\n" \
+                      f"Факультет: {executor[1]}\n" \
+                      f"О себе: {executor[2]}\n" \
+                      f"Ссылка на страницу: {executor[3]}\n\n"
+            final_exec_list += f"{element}"
+        if not exec_list:
+            final_exec_list = 'Исполнителей пока что нет('
+        await call.message.edit_text(f"{final_exec_list}",
+                                     reply_markup=tg_keyboards.executors_menu,
+                                     disable_web_page_preview=True)
+        await call.answer()
+    elif call.data == 'buy_ready':
+        query_text = f"""SELECT name, faculty, about, link, var FROM ready_works"""
+        work_list = cur.execute(query_text).fetchall()
+        final_work_list = 'Готовых продавать свои старые работы пока что мало. Станьте одним из первых, это ' \
+                          'бесплатно! Подать заявку для включения в список можно в разделе «Дополнительно» -> ' \
+                          '«Зарегистрироваться». На данный момент зарегистрированы:\n\n'
+        for work in work_list:
+            element = f"Имя: {work[0]}\n" \
+                      f"Факультет: {work[1]}\n" \
+                      f"Вариант: {work[4]}\n" \
+                      f"О себе: {work[2]}\n" \
+                      f"Ссылка на страницу: {work[3]}\n\n"
+            final_work_list += f"{element}"
+        if not work_list:
+            final_work_list = 'Готовых продавать свои старые работы пока что нет :('
+        await call.message.edit_text(f"{final_work_list}",
+                                     reply_markup=tg_keyboards.executors_menu,
+                                     disable_web_page_preview=True)
+        await call.answer()
+
+    elif call.data == 'back':
+        await call.message.delete()
+        await call.message.answer('Возвращаемся',
+                                  reply_markup=tg_keyboards.main_menu)
+        await state.finish()
+        await call.answer()
+
+
+class AdditionMenu(StatesGroup):
+    main = State()
+    registration = State()
+    correction = State()
+    phone_book = State()
+
+
+@dp.message_handler(Text(equals='Дополнительно', ignore_case=True))
+async def additional_menu(message: types.Message):
+    await message.answer('Дополнительное меню',
+                         reply_markup=tg_keyboards.additional_menu)
+    await AdditionMenu.main.set()
+
+
+class RegistrationMenu(StatesGroup):
+    main = State()
+    executor = State()
+    executor_conf = State()
+    executor_faculty = State()
+    executor_about = State()
+    executor_link = State()
+    ready_work = State()
+    ready_work_conf = State()
+    ready_work_var = State()
+    ready_work_faculty = State()
+    ready_work_about = State()
+    ready_work_link = State()
+    ready_work_finish = State()
+
+
+class SuggestCorr(StatesGroup):
+    suggest = State()
+    confirm_suggest = State()
+    send_suggest = State()
+
+
+@dp.callback_query_handler(state=AdditionMenu.main)
+async def additional_menu_2(call: types.CallbackQuery, state: FSMContext):
+    if call.data == 'registration':
+        await state.finish()
+        await RegistrationMenu.main.set()
+        await call.answer()
+    elif call.data == 'correction':
+        await state.finish()
+        await call.message.edit_text('Внести исправление')
+        await SuggestCorr.suggest.set()
+
+
+@dp.callback_query_handler(state=SuggestCorr.suggest)
+async def send_correction(call: types.CallbackQuery, state: FSMContext):
+    await SuggestCorr.suggest.set()
+    await call.message.edit_text('Внести исправление')
 
 
 @dp.message_handler()
